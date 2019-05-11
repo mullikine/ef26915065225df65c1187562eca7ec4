@@ -30,14 +30,20 @@ class SimpleRNN(nn.Module):
     def forward(self, inputs, hidden=None, force=True, steps=0):
         if force or steps == 0: steps = len(inputs)
         outputs = Variable(torch.zeros(steps,300))
-        for i in range(steps):
+        i = 0
+        while(True):
             if force or i == 0:
                 input = inputs[i]
             else:
                 input = output
             output, hidden = self.step(input, hidden)
             outputs[i] = output
-        return outputs, hidden
+            if(sum(output)==0 or sum(inputs[i]) ==0):
+                print("EOS")
+                # break
+            	return outputs, hidden
+            i += 1
+
 
 n_epochs = 100
 n_iters = 50
@@ -50,11 +56,11 @@ optimizer = optim.SGD(model.parameters(), lr=0.01)
 
 example = np.load("examplevec.npy")
 exampletc = Variable(torch.from_numpy(example))
-# print(exampletc.detach().shape)
-print(example.shape)
-out = model(exampletc,None,True)
-print(out[0].shape)
-exit(0)
+# # print(exampletc.detach().shape)
+# print(example.shape)
+# out = model(exampletc,None,True)
+# print(out[0].shape)
+# exit(0)
 
 from collections import defaultdict
 
@@ -90,6 +96,14 @@ def t_vec_to_word(vec):
 
     return word_list[np.argmin(np.array(symarr))]
 
+def word_to_vec(word):
+
+    return vectors[word_to_index[word]]
+
+def word_to_vector(word):
+    return vectors[word_to_index[word]]
+
+
 # def t_vec_to_word(vec):
 #     criterion = nn.MSELoss()
 #     vectort = Variable(torch.from_numpy(vectors))
@@ -98,12 +112,13 @@ def t_vec_to_word(vec):
 
 #     return word_list[np.argmin(np.array(symarr))]
 
-out = out[0].detach().numpy()
-toprint = ""
-for vec in example:
-    toprint += t_vec_to_word(vec) + " "
-print(toprint.strip(" "))
-    # print(mse_vector_to_word(vec))
+
+
+# toprint = ""
+# for vec in example:
+#     toprint += t_vec_to_word(vec) + " "
+# print(toprint.strip(" "))
+#     # print(mse_vector_to_word(vec))
 
 
 
@@ -121,29 +136,39 @@ symarr = []
 
 # self.out = nn.Linear(hidden_size, 1)
 
-from ptpython.repl import embed
-embed(globals(), locals())
 
 
 # summary(model, (2,1,300))
 
-# for epoch in range(n_epochs):
+import os
 
-#     for iter in range(n_iters):
-#         _inputs = sample(50)
-#         inputs = Variable(torch.from_numpy(_inputs[:-1]).float())
-#         targets = Variable(torch.from_numpy(_inputs[1:]).float())
+from shanepy import *
 
-#         # Use teacher forcing 50% of the time
-#         force = random.random() < 0.5
-#         outputs, hidden = model(inputs, None, force)
+train_dir = r'/home/shane/dump/home/shane/notes2018/ws/deep-learning/chen/traindata'
+for epoch in range(n_epochs):
+    # tv(os.listdir(train_dir))
 
-#         optimizer.zero_grad()
-#         loss = criterion(outputs, targets)
-#         loss.backward()
-#         optimizer.step()
+    for train in os.listdir(train_dir):
+        text = np.load(os.path.join(train_dir,train))
 
-#         losses[epoch] += loss.data[0]
+        inputs = Variable(torch.from_numpy(text[:]).float())
+        targets = Variable(torch.from_numpy(text[1:]).float())
 
-#     if epoch > 0:
-#         print(epoch, loss.data[0])
+        # Use teacher forcing 50% of the time
+        force = random.random() < 0.5
+        outputs, hidden = model(inputs, None, force)
+
+        optimizer.zero_grad()
+        loss = criterion(outputs, targets)
+        loss.backward()
+        optimizer.step()
+
+        losses[epoch] += loss.data[0]
+
+    if epoch > 0:
+        print(epoch, loss.data[0])
+
+
+
+from ptpython.repl import embed
+embed(globals(), locals())
