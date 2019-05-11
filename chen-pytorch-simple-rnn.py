@@ -29,7 +29,7 @@ class SimpleRNN(nn.Module):
 
     def forward(self, inputs, hidden=None, force=True, steps=0):
         if force or steps == 0: steps = len(inputs)
-        outputs = Variable(torch.zeros(steps,300))
+        outputs = Variable(torch.zeros(steps-1,300))
         i = 0
         while(True):
             if force or i == 0:
@@ -37,11 +37,11 @@ class SimpleRNN(nn.Module):
             else:
                 input = output
             output, hidden = self.step(input, hidden)
-            outputs[i] = output
-            if(sum(output)==0 or sum(inputs[i]) ==0):
-                print("EOS")
+
+            if(sum(output[0])==0 or sum(inputs[i]) ==0):
                 # break
-            	return outputs, hidden
+                return outputs, hidden
+            outputs[i] = output
             i += 1
 
 
@@ -51,7 +51,7 @@ hidden_size = 100
 
 model = SimpleRNN(hidden_size)
 criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01)
+optimizer = optim.Adam(model.parameters(), lr=0.01)
 
 
 example = np.load("examplevec.npy")
@@ -148,23 +148,22 @@ train_dir = r'/home/shane/dump/home/shane/notes2018/ws/deep-learning/chen/traind
 for epoch in range(n_epochs):
     # tv(os.listdir(train_dir))
 
-    for train in os.listdir(train_dir):
+    for i,train in enumerate(os.listdir(train_dir)):
         text = np.load(os.path.join(train_dir,train))
 
-        inputs = Variable(torch.from_numpy(text[:]).float())
-        targets = Variable(torch.from_numpy(text[1:]).float())
+        inputs = Variable(torch.from_numpy(text[:]).float(),requires_grad=True)
+        targets = Variable(torch.from_numpy(text[1:]).float(),requires_grad=True)
 
         # Use teacher forcing 50% of the time
         force = random.random() < 0.5
         outputs, hidden = model(inputs, None, force)
 
         optimizer.zero_grad()
-        loss = criterion(outputs, targets)
+        loss = 0.000001* criterion(outputs, targets)
         loss.backward()
         optimizer.step()
-
-        losses[epoch] += loss.data[0]
-
+        # losses[epoch] += loss.data[0]
+        print(i,loss.data[0])
     if epoch > 0:
         print(epoch, loss.data[0])
 
