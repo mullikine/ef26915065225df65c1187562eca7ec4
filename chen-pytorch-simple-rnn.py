@@ -167,7 +167,12 @@ for epoch in range(n_epochs):
     if epoch > 0:
         print(epoch, loss.data[0])
 
+    # 'model': Classifier(),
+    checkpoint = {
+              'state_dict': model.state_dict(),
+              'optimizer' : optimizer.state_dict()}
 
+    torch.save(checkpoint, 'checkpoint.pth')
 
 from ptpython.repl import embed
 embed(globals(), locals())
